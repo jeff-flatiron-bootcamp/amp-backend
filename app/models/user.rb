@@ -34,4 +34,18 @@ class User < ApplicationRecord
     def admin_check
         return self.admin
     end
+
+    def rand_future_date(to)      
+        now = DateTime.now
+        #date_today = DateTime.parse(now.strftime("%Y-%m-%dT12:00:00%z"))      
+        date_today = DateTime.parse(now.strftime("%Y-%m-%d"))      
+        date_today.next_day(rand(to))    
+    end
+    
+    def rand_past_date(back_days, back_months)
+        now = DateTime.now
+        date_today = DateTime.parse(now.strftime("%Y-%m-%d"))  
+        date_today.prev_day(back_days) << back_months
+    end
+
 end

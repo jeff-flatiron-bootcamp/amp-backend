@@ -3,7 +3,7 @@ require "date"
 require "date"
 def rand_future_date(to)      
     now = DateTime.now
-    #date_a = DateTime.parse(now.strftime("%Y-%m-%dT12:00:00%z"))      
+    #date_today = DateTime.parse(now.strftime("%Y-%m-%dT12:00:00%z"))      
     date_today = DateTime.parse(now.strftime("%Y-%m-%d"))      
     date_today.next_day(to)    
 end
@@ -14,15 +14,12 @@ def rand_past_date(back_days, back_months)
     date_today.prev_day(back_days) << back_months
 end
 
-
 # #detete payments
 Payment.all.destroy_all
 # #delete leases
 Lease.all.destroy_all
 # #delete property addresses
 PropertyAddress.all.destroy_all
-
-
 
 # byebug
 if LeaseType.all.length() == 0
@@ -98,7 +95,6 @@ if PropertyAddress.all.count == 0
         ))
     end
 end
-
 
 #create a few leases
 # to see decimal types use .to_digits
