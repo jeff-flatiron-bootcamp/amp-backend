@@ -9,7 +9,7 @@ class Api::V1::UsersController < ApplicationController
       @user = User.create(user_params)
       if @user.valid?
         @token = encode_token({ user_id: @user.id })
-        render json: { user: UserSerializer.new(@user), jwt: @token }, status: :created
+        render json: { status: 200, user: UserSerializer.new(@user), jwt: @token }, status: :created
       else
         render json: { error: 'failed to create user' }, status: :not_acceptable
       end
@@ -219,9 +219,64 @@ class Api::V1::UsersController < ApplicationController
       end
       return render json: {info: "Success. Lease balances have been each charged their monthly rent"}
     end
+
+    def update_profile
       
-    private
-   
+      user_contact = {}
+      user_contacts = UserContact.where(user_id: current_user.id, address_type: "PRIOR")
+      
+      if(user_contacts.count == 0)
+        user_contact = UserContact.create(
+            street_address: "",
+            city: "",
+            state: "",
+            zip: "",
+            phone: "",
+            email: "",
+            user_id: current_user.id,
+            address_type: "PRIOR"    
+        )        
+      else
+        user_contact = user_contacts[0]
+      end
+      
+      if(!user_contact)
+        return render json: {status: 400, info: "Bad Request-update_profile. Unable to get or create a user_contact to update"}
+      end      
+      user_contact.update(email: params["updated_profile_data"]["email"], phone: params["updated_profile_data"]["phone"])            
+      current_user.update(firstname: params["updated_profile_data"]["first_name"], lastname: params["updated_profile_data"]["last_name"])
+    
+      render json: { user: UserSerializer.new(current_user), user_contact: user_contact }, status: :accepted      
+    end
+
+    def profile_detail      
+      user_contacts = UserContact.where(user_id: current_user.id, address_type: "PRIOR")
+      render json: { user: UserSerializer.new(current_user), user_contact: user_contacts[0] }, status: :accepted
+    end
+
+    def renter_get_lease      
+      primary_leases = Lease.where(user_id: current_user.id, status: true)      
+      user_on_lease = {}      
+      property_on_lease = {}
+      if(primary_leases.count > 0)        
+        user_on_lease = User.find(primary_leases[0].user_id)
+        property_on_lease = PropertyAddress.find(primary_leases[0].property_address_id)
+        primary_lease = primary_leases[0]
+      end       
+      render json: { status: 200, primary_lease: primary_lease, user_on_lease: user_on_lease, property_on_lease: property_on_lease}, status: :accepted
+    end
+
+    def renter_get_payment_history
+      primary_lease = Lease.where(user_id: current_user.id, status: true)
+      if primary_lease.count > 0
+        payment_history = Payment.where(lease_id: primary_lease[0].id)    
+        return render json: { payment_history: payment_history}, status: :accepted
+      end
+      return render json: { payment_history: []}, status: :accepted
+    end
+    
+
+    private   
     def user_params
       params.require(:user).permit(:username, :password, :firstname, :lastname, :admin)
     end
