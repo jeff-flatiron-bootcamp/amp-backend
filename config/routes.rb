@@ -9,8 +9,9 @@ Rails.application.routes.draw do
       post '/renter_create_payment', to: 'users#renter_create_payment'
       post '/admin_get_payment_history_for_renter', to: 'users#admin_get_payment_history_for_renter'
       post '/admin_charge_monthly_rents_active_leases', to: 'users#admin_charge_monthly_rents_active_leases'
-      
-      get '/users/:id', to: 'users#show'
+      post '/comment_subset', to: 'users#comment_subset'
+
+      get '/users/:id', to: 'users#show'      
 
       get '/profile', to: 'users#profile'
       get '/profile_detail', to: 'users#profile_detail'
@@ -30,6 +31,10 @@ Rails.application.routes.draw do
       patch '/admin_apply_payment_to_lease', to: 'users#admin_apply_payment_to_lease'                      
       patch '/admin_manually_apply_monthly_rent_to_active_leases', to: 'users#admin_manually_apply_monthly_rent_to_active_leases'
 
+      resources :property_addresses, only: [:create, :show]
+        #get '/users/:id', to: 'users#show'   
+        #get '/property_addresses/:id', to: 'property_addresses#show'
+        patch '/update_property_address', to: 'property_addresses#update_property_address'
     end
   end
 end
