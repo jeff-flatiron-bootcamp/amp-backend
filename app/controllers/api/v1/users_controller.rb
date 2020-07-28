@@ -4,8 +4,31 @@ class Api::V1::UsersController < ApplicationController
     def profile
       render json: { user: UserSerializer.new(current_user) }, status: :accepted
     end
+
+    def show
+      if(!@user.admin)
+        return render json: {info: "Fail-admin_create_property-#{@user.username} is not admin"}        
+      end
+      
+      found_user = User.find(params[:id])
+      if(!found_user)
+        return render json: {status: 400, info: "Bad Request. User with id #{@fail_id} not found."}
+      end
+    
+      user_contact = {}
+      user_contacts = UserContact.where(user_id: found_user.id, address_type: "PRIOR")
+      if(user_contacts.count > 0)
+        user_contact = user_contacts[0]
+      end
+      render json: { status: 200, user: UserSerializer.new(found_user), user_contact: user_contact }, status: :accepted
+
+      #render json: { status: 200, user: UserSerializer.new(found_user) }, status: :accepted
+    
+      # render a view...
+    end
    
     def create
+      
       @user = User.create(user_params)
       if @user.valid?
         @token = encode_token({ user_id: @user.id })
@@ -51,31 +74,34 @@ class Api::V1::UsersController < ApplicationController
     end
 
     def admin_create_lease
+      #byebug
       if(!@user.admin)
         return render json: {info: "Fail-admin_create_lease-#{@user.username} is not admin"}        
       end
+      #byebug
       if !validate_params(params, "leaseToCreate")
         return render json: {status: 400, info: "Bad Request-admin_create_lease. Required parameter #{@fail_id} must not be empty."}
       end       
-                            
+            
+      #byebug
       foundLeaseType = LeaseType.find_by_id(params["leaseToCreate"]["lease_type_id"])      
       if !foundLeaseType                 
         return render json: {status: 404, info: "Bad Request-admin_create_lease. Id LeaseType Id#{params["leaseToCreate"]["lease_type_id"]} was not found."}
       end
-
+      #byebug
       propertyForNewLease = PropertyAddress.find_by_id(params["leaseToCreate"]["property_id"])      
       if !propertyForNewLease      
         return render json: {status: 404, info: "Bad Request-admin_create_lease. PropertyAddress Id#{params["leaseToCreate"]["property_id"]} was not found."}
       end
-
+      #byebug
       renterForNewLease = User.find_by_id(params["leaseToCreate"]["user_id"])      
       if !renterForNewLease      
         return render json: {status: 404, info: "Bad Request-admin_create_lease. User Id#{params["leaseToCreate"]["user_id"]} was not found."}
       end
-
+      #byebug
       random_start_date = @user.rand_future_date(90)
       random_end_date = random_start_date >> foundLeaseType.duration_months
-
+      #byebug
       createdLease = Lease.create(
         user_id: params["leaseToCreate"]["user_id"],        
         property_address_id: params["leaseToCreate"]["property_id"],
@@ -86,6 +112,7 @@ class Api::V1::UsersController < ApplicationController
         first_month_rent: params["leaseToCreate"]["first_month_rent"],
         last_month_rent: params["leaseToCreate"]["last_month_rent"],
         security_deposit: params["leaseToCreate"]["security_deposit"],
+        balance: params["leaseToCreate"]["balance"],
         status: true
       )
       if createdLease.valid?
@@ -94,6 +121,18 @@ class Api::V1::UsersController < ApplicationController
         render json: {status: 500, info: "Failed to create lease."}
       end    
        
+    end
+
+    def admin_charge_monthly_rents_active_leases
+      if(!@user.admin)
+        return render json: {info: "Fail-admin_create_payment-#{@user.username} is not admin"}        
+      end
+
+      active_leases = @user.admin_get_all_active_leases()
+      for active_lease in active_leases do    
+        active_lease.balance = active_lease.balance + active_lease.monthly_rent_price
+        active_lease.save()
+      end
     end
 
     def admin_create_payment
@@ -118,6 +157,28 @@ class Api::V1::UsersController < ApplicationController
         end  
       else
         render json: {info: "Invalid lease submited"}
+      end
+    end
+
+    def renter_create_payment    
+      if !validate_params(params, "payment")
+        return render json: {status: 400, info: "Bad Request-admin_create_payment. Required parameter #{@fail_id} must not be empty."}
+      end    
+      foundLease = Lease.find(params["payment"]["lease_id"])      
+      if foundLease
+        
+        createdPayment = Payment.create(
+          lease_id: foundLease.id,
+          amount: BigDecimal(params["payment"]["amount"])                        
+        )
+        if createdPayment.valid?
+          @user.apply_payment_to_lease(foundLease, createdPayment)  # This call needs refactoring for security
+          render json: {status: 201, info: "Created Payment.", createdPayment: createdPayment}, status: :created
+        else
+          return render json: {status: 404, info: "Failed to create payment."}          
+        end  
+      else
+        render json: {status: 400, info: "Invalid lease submited"}
       end
     end
 
@@ -241,12 +302,12 @@ class Api::V1::UsersController < ApplicationController
       end
       
       if(!user_contact)
-        return render json: {status: 400, info: "Bad Request-update_profile. Unable to get or create a user_contact to update"}
+        return render json: {status: 400, statusmessage: "Bad Request-update_profile. Unable to get or create a user_contact to update"}
       end      
       user_contact.update(email: params["updated_profile_data"]["email"], phone: params["updated_profile_data"]["phone"])            
       current_user.update(firstname: params["updated_profile_data"]["first_name"], lastname: params["updated_profile_data"]["last_name"])
     
-      render json: { user: UserSerializer.new(current_user), user_contact: user_contact }, status: :accepted      
+      render json: { status: 204, statusmessage: "Updated user profile information", user: UserSerializer.new(current_user), user_contact: user_contact }, status: :accepted      
     end
 
     def profile_detail      
@@ -270,6 +331,15 @@ class Api::V1::UsersController < ApplicationController
       primary_lease = Lease.where(user_id: current_user.id, status: true)
       if primary_lease.count > 0
         payment_history = Payment.where(lease_id: primary_lease[0].id)    
+        return render json: { payment_history: payment_history}, status: :accepted
+      end
+      return render json: { payment_history: []}, status: :accepted
+    end
+
+    def admin_get_payment_history_for_renter
+      primary_lease = Lease.where(user_id: params["user_id"], status: true)
+      if primary_lease.count > 0
+        payment_history = Payment.where(lease_id: primary_lease[0].id)         
         return render json: { payment_history: payment_history}, status: :accepted
       end
       return render json: { payment_history: []}, status: :accepted

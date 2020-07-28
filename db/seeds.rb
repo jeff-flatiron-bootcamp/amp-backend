@@ -147,20 +147,40 @@ for for_property in properties do
         )
 end
 
+
 #apply monthly rent charge to active leases
 admin = User.all[0]
-
+applied_rent = []
 active_leases = admin.admin_get_all_active_leases()
 for active_lease in active_leases do    
-    active_lease.balance = active_lease.balance + active_lease.monthly_rent_price
-    active_lease.save()
+    random_times = rand(1..10)
+    applied_rent.push(random_times)
+    for i in 1..random_times do
+        active_lease.balance = active_lease.balance + active_lease.monthly_rent_price
+        active_lease.save()        
+    end
 end
 
+byebug
 
 #make payments
+indexer = 0
 for active_lease in active_leases do
-    payment = Payment.create(lease_id: active_lease.id, amount: active_lease.monthly_rent_price)
-    admin.apply_payment_to_lease(active_lease, payment)
+    for i in 1..applied_rent[indexer] do
+        sleep 0.5
+        payment = Payment.create(lease_id: active_lease.id, amount: active_lease.monthly_rent_price)
+        admin.apply_payment_to_lease(active_lease, payment)
+    end
+    indexer = indexer + 1
+    # random_times = rand(10)
+    # for i in 0..random_times do
+    # for i in applied_rent
+    #     for j in 1..i    
+    #         sleep 0.5
+    #         payment = Payment.create(lease_id: active_lease.id, amount: active_lease.monthly_rent_price)
+    #         admin.apply_payment_to_lease(active_lease, payment)
+    #     end
+    # end
 end
 
 

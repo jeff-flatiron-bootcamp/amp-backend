@@ -6,6 +6,11 @@ Rails.application.routes.draw do
       post '/admin_create_lease', to: 'users#admin_create_lease'
       post '/admin_create_property', to: 'users#admin_create_property'
       post '/admin_create_payment', to: 'users#admin_create_payment'
+      post '/renter_create_payment', to: 'users#renter_create_payment'
+      post '/admin_get_payment_history_for_renter', to: 'users#admin_get_payment_history_for_renter'
+      post '/admin_charge_monthly_rents_active_leases', to: 'users#admin_charge_monthly_rents_active_leases'
+      
+      get '/users/:id', to: 'users#show'
 
       get '/profile', to: 'users#profile'
       get '/profile_detail', to: 'users#profile_detail'
