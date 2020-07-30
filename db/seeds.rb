@@ -1,6 +1,4 @@
 require "date"
-
-require "date"
 def rand_future_date(to)      
     now = DateTime.now
     #date_today = DateTime.parse(now.strftime("%Y-%m-%dT12:00:00%z"))      
@@ -20,6 +18,8 @@ Payment.all.destroy_all
 Lease.all.destroy_all
 # #delete property addresses
 PropertyAddress.all.destroy_all
+# #delete all comments
+Comment.all.destroy_all
 
 # byebug
 if LeaseType.all.length() == 0
@@ -161,7 +161,7 @@ for active_lease in active_leases do
     end
 end
 
-byebug
+#byebug
 
 #make payments
 indexer = 0

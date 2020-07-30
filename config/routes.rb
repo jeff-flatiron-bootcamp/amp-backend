@@ -10,6 +10,7 @@ Rails.application.routes.draw do
       post '/admin_get_payment_history_for_renter', to: 'users#admin_get_payment_history_for_renter'
       post '/admin_charge_monthly_rents_active_leases', to: 'users#admin_charge_monthly_rents_active_leases'
       post '/comment_subset', to: 'users#comment_subset'
+      post '/create_comment', to: 'users#create_comment'
 
       get '/users/:id', to: 'users#show'      
 
@@ -27,6 +28,7 @@ Rails.application.routes.draw do
       
 
       patch '/update_profile', to: 'users#update_profile'
+      patch '/admin_update_profile', to: 'users#admin_update_profile'
       patch '/admin_terminate_lease', to: 'users#admin_terminate_lease'
       patch '/admin_apply_payment_to_lease', to: 'users#admin_apply_payment_to_lease'                      
       patch '/admin_manually_apply_monthly_rent_to_active_leases', to: 'users#admin_manually_apply_monthly_rent_to_active_leases'
